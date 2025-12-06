@@ -457,6 +457,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f7eca18f9d759954fb7e54b0ab0a6107, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  cam: {fileID: 330585543}
   width: 50
   height: 50
   cellSize: 1
@@ -464,7 +465,10 @@ MonoBehaviour:
   wallColour: {r: 0, g: 0, b: 0, a: 1}
   highlightColor: {r: 0, g: 0, b: 1, a: 1}
   bottomPlaneColor: {r: 1, g: 1, b: 1, a: 1}
-  algorithm: {fileID: 11400000, guid: ee0ae27b0ddad5541b26b3490867a03a, type: 2}
+  wallThickness: 0.15
+  algorithms:
+  - {fileID: 11400000, guid: 7cdc49890c1e91b4cafee71e31f74329, type: 2}
+  - {fileID: 11400000, guid: ee0ae27b0ddad5541b26b3490867a03a, type: 2}
 --- !u!4 &1166814246
 Transform:
   m_ObjectHideFlags: 0
