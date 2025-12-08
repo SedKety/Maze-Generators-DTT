@@ -2,6 +2,8 @@ using System;
 
 
 //The bordering walls the assigned cell has
+//Stores the surrounding walls as an bytemask to minimalize memory usage
+//Could potentially bitpack 4 walls per "CellWalls" if enough time remains
 [Flags]
 public enum CellWalls : byte
 {

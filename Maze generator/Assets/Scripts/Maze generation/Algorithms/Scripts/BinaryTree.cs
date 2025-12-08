@@ -6,6 +6,7 @@ using UnityEngine;
 [CreateAssetMenu(menuName = "Maze/Algorithms/Binary Tree")]
 public class BinaryTree : MazeGenerationAlgorithm
 {
+    //My utmost apologies if some explaining comments seem intuitive, I do not know the level of programmer reading this
     public override IEnumerator Generate(
         int width,
         int height,
@@ -28,11 +29,11 @@ public class BinaryTree : MazeGenerationAlgorithm
                 //This is the important part about the binary-tree algorithms.
                 //It defines where the tree can grow to using 2D vector math
 
-                // Southwest bias (feels like growing from bottom-right)
+                //Southwest bias (feels like growing from bottom-right)
                 if (y < height - 1) possibleDirections.Add(CellWalls.South);
                 if (x < width - 1) possibleDirections.Add(CellWalls.East);
 
-                // Northeast bias
+                //Northeast bias
                 if (y > 0) possibleDirections.Add(CellWalls.North);
                 if (x < width - 1) possibleDirections.Add(CellWalls.East);
 
@@ -42,7 +43,13 @@ public class BinaryTree : MazeGenerationAlgorithm
                     CellWalls chosen = possibleDirections[UnityEngine.Random.Range(0, possibleDirections.Count)];
 
                     //Remove wall from current cell
-                    cells[x, y].Walls &= ~chosen; //Perform a bitwie NOT operation to remove the chosen wall from the walls
+                    cells[x, y].Walls &= ~chosen; //Perform 2 bitwise operators: AND: &, and NOT: ~
+                    //NOT: x = 0101,  y = ~x, y = 1010,
+                    //Inverses all bits
+                    //AND: x = 0101, y = 0001, z = y & x, z = 0001.
+                    //Compares all bits, if both bits are 1 leave it unchanged, otherwise set to zero
+
+
                     onWallRemoved?.Invoke(x, y, chosen);
 
                     //Remove the neighbour's walls

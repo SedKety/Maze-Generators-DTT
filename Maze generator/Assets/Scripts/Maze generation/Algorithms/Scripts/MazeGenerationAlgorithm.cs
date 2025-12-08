@@ -6,15 +6,15 @@ using UnityEngine;
 //Provides a ruleset all generators have to follow(such as returning an ienumerator, and holding information/settings on it)
 public abstract class MazeGenerationAlgorithm : ScriptableObject
 {
+    public string generationName;
+
     //An description on how the maze is generated and where it's originally from.
     public string description;
 
     //Ways the client could use the maze in development(e.g: pinball, minigame, shooter, etc)
-    public string useCaseExplanation;
-
+    public string[] useCaseExplanation;
 
     public abstract IEnumerator Generate(
-
         //The scale of the maze in 2 dimensions
         //Maze scale: (width, 0, height).
         int width, 

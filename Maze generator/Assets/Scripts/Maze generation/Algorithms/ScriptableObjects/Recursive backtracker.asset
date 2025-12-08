@@ -12,5 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b3f99c3c0a2ef3418e25107d9ca7762, type: 3}
   m_Name: Recursive backtracker
   m_EditorClassIdentifier: 
+  generationName: Recursive backtracker
   description: 
-  useCaseExplanation: 
+  useCaseExplanation: []

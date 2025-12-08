@@ -5,41 +5,53 @@ using System.Collections;
 public class MazeRenderer : MonoBehaviour
 {
     [SerializeField] private GameObject cam;
- 
     [Header("Maze Settings")]
     [Tooltip("X scale of the maze")]
-    [Range(5, 250)][SerializeField] private int width;
+    [Range(1, 1000)][SerializeField] private int width;
     [Tooltip("Y scale of the maze")]
-    [Range(5, 250)][SerializeField] private int height;
-
+    [Range(1, 1000)][SerializeField] private int height;
     [Tooltip("The scale of each individual cell. cell.localScale * cellSize")]
     [SerializeField] private float cellSize = 1;
-
     [Tooltip("Time between generation steps (what counts as a \"step\" depends on the algorithms)")]
     [SerializeField] private float generationDelay = 0.015f;
-
     [Header("Visuals")]
     [SerializeField] private Color wallColour = Color.black;
     [SerializeField] private Color highlightColor = Color.blue;
     [SerializeField] private Color bottomPlaneColor = Color.white;
     [SerializeField] private float wallThickness = 0.15f;
-
     [Header("Algorithm")]
     [Tooltip("The maze generation algorithms available for this renderer. The first algorithms in the list is used to generate the maze.")]
     [SerializeField] private MazeGenerationAlgorithm[] algorithms;
 
-
     private CellState[,] cells;
-    private GameObject[,] horizontalWalls;
-    private GameObject[,] verticalWalls;
+
+    //GPU instancing
+    private Mesh wallMesh;
+    private Material wallMaterial;
+    private Matrix4x4[] horizontalMatrices;
+    private Matrix4x4[] verticalMatrices;
+    private const int INSTANCES_PER_BATCH = 1023;
+    //Unity has a limit on how many instance can be in one batch which is 1024,
+    //Unity reserves one allowing us to take the remaining 1023
+
     private GameObject highlightCube;
     private GameObject bottomPlane;
+
+    private void Awake()
+    {
+        // Create a shared mesh + material for all walls
+        wallMesh = GameObject.CreatePrimitive(PrimitiveType.Cube).GetComponent<MeshFilter>().sharedMesh;
+        DestroyImmediate(GameObject.Find("Cube")); // cleanup the temporary cube
+
+        wallMaterial = new Material(Shader.Find("Universal Render Pipeline/Unlit")); // or "Standard" if using Built-in RP
+        wallMaterial.color = wallColour;
+        wallMaterial.enableInstancing = true;
+    }
 
     private void Start()
     {
         GenerateMaze();
     }
-
 
     //Temporary devtool to help with debugging.
     //If you(the reviewer sees this, my bad. sloppy work on my end.)
@@ -51,18 +63,11 @@ public class MazeRenderer : MonoBehaviour
         }
     }
 
-
-    //Reset all the data from the last generated maze (if there was one)
-    //Creates all the necessary data for the next maze (eg: walls, bottom plane, highlight cube, cells)
-
     public void GenerateMaze()
     {
         StopAllCoroutines();
         ClearMaze();
-
         cells = new CellState[width, height];
-        horizontalWalls = new GameObject[width, height + 1];
-        verticalWalls = new GameObject[width + 1, height];
 
         for (int x = 0; x < width; x++)
         {
@@ -72,11 +77,12 @@ public class MazeRenderer : MonoBehaviour
             }
         }
 
-        var highestVal = width >= height ? height : width;
+        var highestVal = width >= height ? width : height;
+        if (highestVal < 5) highestVal = 5;
         cam.transform.position = new Vector3(0, highestVal * cellSize, 0);
 
         GenerateBottomPlane();
-        BuildAllWalls();
+        AllocateInstancingBuffers();
         CreateHighlightCube();
 
         StartCoroutine(algorithms[0].Generate(
@@ -89,27 +95,46 @@ public class MazeRenderer : MonoBehaviour
         ));
     }
 
-
-    //Creates an border for the maze
-    void BuildAllWalls()
+    void AllocateInstancingBuffers()
     {
-        // Horizontal walls (above each row)
+        //Horizontal walls
+        horizontalMatrices = new Matrix4x4[width * (height + 1)];
+
+        //Vertical walls
+        verticalMatrices = new Matrix4x4[(width + 1) * height];
+
+        //Create an unmodified grid
+        for (int i = 0; i < horizontalMatrices.Length; i++) horizontalMatrices[i] = Matrix4x4.identity;
+        for (int i = 0; i < verticalMatrices.Length; i++) verticalMatrices[i] = Matrix4x4.identity;
+
+        //Build all walls initially (full grid)
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y <= height; y++)
             {
-                horizontalWalls[x, y] = CreateWall(x + 0.5f, y, cellSize, wallThickness);
+                int idx = x + y * width;
+                horizontalMatrices[idx] = GetWallMatrix(x + 0.5f, y, cellSize, wallThickness);
             }
         }
-
-        // Vertical walls (left of each column)
         for (int x = 0; x <= width; x++)
         {
             for (int y = 0; y < height; y++)
             {
-                verticalWalls[x, y] = CreateWall(x, y + 0.5f, wallThickness, cellSize);
+                int idx = x + y * (width + 1);
+                verticalMatrices[idx] = GetWallMatrix(x, y + 0.5f, wallThickness, cellSize);
             }
         }
+    }
+
+    Matrix4x4 GetWallMatrix(float gridX, float gridZ, float scaleX, float scaleZ)
+    {
+        Vector3 pos = new Vector3(
+            (gridX - width * 0.5f) * cellSize,
+            0f,
+            (gridZ - height * 0.5f) * cellSize
+        );
+        Vector3 scale = new Vector3(scaleX, 0.5f, scaleZ);
+        return Matrix4x4.TRS(pos, Quaternion.identity, scale);
     }
 
     void GenerateBottomPlane()
@@ -117,25 +142,11 @@ public class MazeRenderer : MonoBehaviour
         if (bottomPlane == null)
         {
             bottomPlane = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            bottomPlane.transform.parent = transform;
         }
-
         bottomPlane.transform.localScale = new Vector3(width * cellSize, 0.5f, height * cellSize);
         bottomPlane.transform.localPosition = new Vector3(0, -0.5f, 0);
         bottomPlane.GetComponent<MeshRenderer>().material.color = bottomPlaneColor;
-    }
-
-    GameObject CreateWall(float gridX, float gridZ, float scaleX, float scaleZ)
-    {
-        GameObject wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        wall.transform.SetParent(transform);
-        wall.transform.localPosition = new Vector3(
-            (gridX - width * 0.5f) * cellSize,
-            0f,
-            (gridZ - height * 0.5f) * cellSize
-        );
-        wall.transform.localScale = new Vector3(scaleX, 0.5f, scaleZ);
-        wall.GetComponent<MeshRenderer>().material.color = wallColour;
-        return wall;
     }
 
     void OnCellVisited(int x, int y)
@@ -143,28 +154,29 @@ public class MazeRenderer : MonoBehaviour
         MoveHighlight(x, y);
     }
 
-    //Destroys the gameobject at the given poition(
     void OnWallRemoved(int x, int y, CellWalls removedWall)
     {
-        // Remove the visual wall(s) that were just carved
-        if ((removedWall & CellWalls.North) != 0 && horizontalWalls[x, y + 1] != null)
+        //For clarification on as to why i dont just remove the walls:
+        //Editing an array that big is way more expensive then just "empty-rendering"
+        if ((removedWall & CellWalls.North) != 0)
         {
-            Destroy(horizontalWalls[x, y + 1]);
+            int idx = x + (y + 1) * width;
+            horizontalMatrices[idx] = Matrix4x4.zero; 
         }
-
-        if ((removedWall & CellWalls.South) != 0 && horizontalWalls[x, y] != null)
+        if ((removedWall & CellWalls.South) != 0)
         {
-            Destroy(horizontalWalls[x, y]);
+            int idx = x + y * width;
+            horizontalMatrices[idx] = Matrix4x4.zero;
         }
-
-        if ((removedWall & CellWalls.East) != 0 && verticalWalls[x + 1, y] != null)
+        if ((removedWall & CellWalls.East) != 0)
         {
-            Destroy(verticalWalls[x + 1, y]);
+            int idx = (x + 1) + y * (width + 1);
+            verticalMatrices[idx] = Matrix4x4.zero;
         }
-
-        if ((removedWall & CellWalls.West) != 0 && verticalWalls[x, y] != null)
+        if ((removedWall & CellWalls.West) != 0)
         {
-            Destroy(verticalWalls[x, y]);
+            int idx = x + y * (width + 1);
+            verticalMatrices[idx] = Matrix4x4.zero;
         }
     }
 
@@ -179,35 +191,62 @@ public class MazeRenderer : MonoBehaviour
         highlightCube.SetActive(false);
     }
 
-
     void MoveHighlight(int x, int y)
     {
-        //The middle of the current cell
         Vector3 pos = new Vector3(
             (x + 0.5f - width * 0.5f) * cellSize,
             0.1f,
             (y + 0.5f - height * 0.5f) * cellSize
         );
-
         highlightCube.transform.localPosition = pos;
         highlightCube.SetActive(true);
     }
 
-    // Called after generation finishes (simple delay)
     private void LateUpdate()
     {
+        RenderInstancedWalls();
+
         if (algorithms != null && !IsGenerationRunning())
         {
             OpenEntranceAndExit();
         }
     }
 
-    //Expensive. Rewrite if there's leftover time
+    void RenderInstancedWalls()
+    {
+        if (wallMesh == null || wallMaterial == null) return;
+
+        MaterialPropertyBlock block = new MaterialPropertyBlock();
+        block.SetColor("_BaseColor", wallColour); 
+
+        //Horizontal walls
+        for (int i = 0; i < horizontalMatrices.Length; i += INSTANCES_PER_BATCH)
+        {
+            int count = Mathf.Min(INSTANCES_PER_BATCH, horizontalMatrices.Length - i);
+            Matrix4x4[] batch = new Matrix4x4[count];
+            for (int j = 0; j < count; j++)
+            {
+                batch[j] = horizontalMatrices[i + j];
+            }
+            Graphics.DrawMeshInstanced(wallMesh, 0, wallMaterial, batch, count, block, UnityEngine.Rendering.ShadowCastingMode.On, true);
+        }
+
+        //Vertical walls
+        for (int i = 0; i < verticalMatrices.Length; i += INSTANCES_PER_BATCH)
+        {
+            int count = Mathf.Min(INSTANCES_PER_BATCH, verticalMatrices.Length - i);
+            Matrix4x4[] batch = new Matrix4x4[count];
+            for (int j = 0; j < count; j++)
+            {
+                batch[j] = verticalMatrices[i + j];
+            }
+            Graphics.DrawMeshInstanced(wallMesh, 0, wallMaterial, batch, count, block, UnityEngine.Rendering.ShadowCastingMode.On, true);
+        }
+    }
+
     private bool IsGenerationRunning()
     {
         if (cells == null) return false;
-
-        //Loops over each cell to see if there are still unchecked cells. If so the generation is still running
         foreach (var cell in cells)
         {
             if (!cell.Visited) return true;
@@ -215,30 +254,34 @@ public class MazeRenderer : MonoBehaviour
         return false;
     }
 
+    //Destroys the entrance and eit walls
     void OpenEntranceAndExit()
     {
-        //Entrance: top-left north wall
-        if (horizontalWalls[0, 0] != null)
-        {
-            Destroy(horizontalWalls[0, 0]);
-        }
+        //Entrance cell: bottom left cell, bottom wall
+        horizontalMatrices[0 + 0 * width] = Matrix4x4.zero;
 
-        //Exit: bottom-right south wall
-        if (horizontalWalls[width - 1, height] != null)
-        {
-            Destroy(horizontalWalls[width - 1, height]);
-        }
+        //Exit cell: top right, top wall
+        horizontalMatrices[(width - 1) + height * width] = Matrix4x4.zero;
 
-        //Hide highlight when done
-        if (highlightCube) highlightCube.SetActive(false);
+        if (highlightCube)
+        {
+            highlightCube.SetActive(false);
+        }
     }
-
 
     void ClearMaze()
     {
         for (int i = transform.childCount - 1; i >= 0; i--)
         {
-            Destroy(transform.GetChild(i).gameObject);
+            if (transform.GetChild(i).gameObject != bottomPlane && transform.GetChild(i).gameObject != highlightCube)
+            {
+                Destroy(transform.GetChild(i).gameObject);
+            }
         }
+    }
+
+    private void OnDestroy()
+    {
+        if (wallMaterial) Destroy(wallMaterial);
     }
 }
