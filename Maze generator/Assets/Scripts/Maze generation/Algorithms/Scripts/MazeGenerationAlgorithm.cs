@@ -16,7 +16,7 @@ public abstract class MazeGenerationAlgorithm : ScriptableObject
 
     public abstract IEnumerator Generate(
         //The scale of the maze in 2 dimensions
-        //Maze scale: (width, 0, height).
+        //Maze scale: (_width, 0, _height).
         int width, 
         int height, 
 
