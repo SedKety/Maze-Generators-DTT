@@ -26,8 +26,16 @@ public class SettingsUI : MonoBehaviour
     {
         settings.mazeIndex = currentMazeIndex;
         settings.generationDelay = float.Parse(stepTimeInput.text);
-        settings.height = int.Parse(heightInput.text);
-        settings.width = int.Parse(widthInput.text);
+
+        int height = int.Parse(heightInput.text);
+        int width = int.Parse(widthInput.text);
+
+        //Make sure there always are cells to validate
+        height = height <= 0 ? 5 : height;
+        width = width <= 0 ? 5 : width;
+
+        settings.height = height;
+        settings.width = width;
     }
 
     public void OnGenerationButtonPushed()

@@ -30,7 +30,7 @@ public class RecursiveBacktracking : MazeGenerationAlgorithm
                 var next = neighbors[UnityEngine.Random.Range(0, neighbors.Count)];
                 stack.Push(next);
 
-                // Remove wall between current and next
+                //Remove wall between current and next
                 var direction = next - current;
                 CellWalls wallToRemoveCurrent = DirectionToWall(direction);
                 CellWalls wallToRemoveNext = DirectionToWall(-direction);
