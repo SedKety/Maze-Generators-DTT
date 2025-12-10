@@ -25,10 +25,25 @@ public class SettingsUI : MonoBehaviour
     void UpdateSettings()
     {
         settings.mazeIndex = currentMazeIndex;
-        settings.generationDelay = float.Parse(stepTimeInput.text);
 
-        int height = int.Parse(heightInput.text);
-        int width = int.Parse(widthInput.text);
+        float generationDelay = 0;
+        int height = 0;
+        int width = 0;
+        if (heightInput.text != string.Empty)
+        {
+            height = int.Parse(heightInput.text);
+
+        }
+        if (widthInput.text != string.Empty)
+        {
+            width = int.Parse(widthInput.text);
+        }
+
+        if (stepTimeInput.text != string.Empty)
+        {
+            generationDelay = float.Parse(stepTimeInput.text);
+            if (generationDelay < 0) generationDelay = 0;
+        }
 
         //Make sure there always are cells to validate
         height = height <= 0 ? 5 : height;
@@ -36,6 +51,7 @@ public class SettingsUI : MonoBehaviour
 
         settings.height = height;
         settings.width = width;
+        settings.generationDelay = generationDelay;
     }
 
     public void OnGenerationButtonPushed()
@@ -49,7 +65,7 @@ public class SettingsUI : MonoBehaviour
         currentMazeIndex++;
 
         //To allow looping
-        if(currentMazeIndex >= mazeCount)
+        if (currentMazeIndex >= mazeCount)
         {
             currentMazeIndex = 0;
         }
@@ -60,7 +76,7 @@ public class SettingsUI : MonoBehaviour
         currentMazeIndex--;
 
         //To allow looping
-        if(currentMazeIndex < 0)
+        if (currentMazeIndex < 0)
         {
             currentMazeIndex = mazeCount - 1;
         }

@@ -287,9 +287,4 @@ public class MazeRenderer : MonoBehaviour
             }
         }
     }
-
-    private void OnDestroy()
-    {
-        if (wallMaterial) Destroy(wallMaterial);
-    }
 }
