@@ -4,8 +4,6 @@ using System.Collections;
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class MazeRenderer : MonoBehaviour
 {
-    [SerializeField] private GameObject cam;
-
     [Header("Maze Settings")]
 
     [Tooltip("The scale of each individual cell. cell.localScale * cellSize")]
@@ -16,7 +14,8 @@ public class MazeRenderer : MonoBehaviour
     [SerializeField] private Color highlightColor = Color.blue;
     [SerializeField] private Color bottomPlaneColor = Color.white;
     [SerializeField] private float wallThickness = 0.15f;
-
+    [SerializeField] private Material floorMat;
+ 
 
     [Header("Settings")]
     [SerializeField] private Settings settings;
@@ -27,11 +26,13 @@ public class MazeRenderer : MonoBehaviour
 
     private CellState[,] cells;
 
-    //GPU instancing
+    [Header("GPU instancing")]
     private Mesh wallMesh;
-    private Material wallMaterial;
-    private Matrix4x4[] horizontalMatrices;
-    private Matrix4x4[] verticalMatrices;
+    [SerializeField] private Material wallMaterial;
+    [SerializeField] private Material highlightMaterial;
+
+    private Matrix4x4[] horizontalMatrices = new Matrix4x4[0];
+    private Matrix4x4[] verticalMatrices = new Matrix4x4[0];
 
     //Unity has a limit on how many instance can be in one batch which is 1024,
     //Unity reserves one allowing us to take the remaining 1023
@@ -47,14 +48,13 @@ public class MazeRenderer : MonoBehaviour
         wallMesh = wall.GetComponent<MeshFilter>().sharedMesh;
         DestroyImmediate(wall); //cleanup the temporary cube
 
-        wallMaterial = new Material(Shader.Find("Universal Render Pipeline/Unlit")); //Get a material with gpu instancing enabled on it
         wallMaterial.color = wallColour;
         wallMaterial.enableInstancing = true;
     }
 
     private void Start()
     {
-        settings.generationFunc = GenerateMaze;
+        settings.OnGenerationEvent += GenerateMaze;
     }
 
     public void GenerateMaze(MazeGenerationAlgorithm MGA, int width, int height, float generationDelay)
@@ -66,6 +66,12 @@ public class MazeRenderer : MonoBehaviour
 
         StopAllCoroutines();
         ClearMaze();
+
+        if (highlightCube != null)
+        {
+            highlightCube.SetActive(false);
+        }
+
         cells = new CellState[_width, _height];
 
         for (int x = 0; x < _width; x++)
@@ -75,10 +81,6 @@ public class MazeRenderer : MonoBehaviour
                 cells[x, y] = new CellState(false, CellWalls.All);
             }
         }
-
-        var highestVal = _width >= _height ? _width : _height;
-        if (highestVal < 5) highestVal = 5;
-        cam.transform.position = new Vector3(0, highestVal * cellSize, 0);
 
         GenerateBottomPlane();
         AllocateInstancingBuffers();
@@ -145,7 +147,9 @@ public class MazeRenderer : MonoBehaviour
         }
         bottomPlane.transform.localScale = new Vector3(_width * cellSize, 0.5f, _height * cellSize);
         bottomPlane.transform.localPosition = new Vector3(0, -0.5f, 0);
-        bottomPlane.GetComponent<MeshRenderer>().material.color = bottomPlaneColor;
+        var renderer = bottomPlane.GetComponent<Renderer>();
+        renderer.material = floorMat;
+        renderer.material.color = bottomPlaneColor;
     }
 
     void OnCellVisited(int x, int y)
@@ -185,7 +189,7 @@ public class MazeRenderer : MonoBehaviour
         highlightCube.transform.SetParent(transform);
         highlightCube.transform.localScale = Vector3.one * cellSize * (1 - wallThickness);
         var rend = highlightCube.GetComponent<Renderer>();
-        rend.material = new Material(Shader.Find("Unlit/Color"));
+        rend.material = highlightMaterial;
         rend.material.color = highlightColor;
         highlightCube.SetActive(false);
     }
@@ -216,7 +220,12 @@ public class MazeRenderer : MonoBehaviour
         if (wallMesh == null || wallMaterial == null) return;
 
         MaterialPropertyBlock block = new MaterialPropertyBlock();
-        block.SetColor("_BaseColor", wallColour); 
+        block.SetColor("_BaseColor", wallColour);
+
+        //Prevent calling before generation
+        if (horizontalMatrices.Length <= 0) return;
+        if (verticalMatrices.Length <= 0) return;
+
 
         //Horizontal walls
         for (int i = 0; i < horizontalMatrices.Length; i += INSTANCES_PER_BATCH)

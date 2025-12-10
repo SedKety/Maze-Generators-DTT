@@ -14,6 +14,8 @@ public abstract class MazeGenerationAlgorithm : ScriptableObject
     //Ways the client could use the maze in development(e.g: pinball, minigame, shooter, etc)
     public string[] useCaseExplanation;
 
+    //The 2 variables above can be implemented if enough time remains
+
     public abstract IEnumerator Generate(
         //The scale of the maze in 2 dimensions
         //Maze scale: (_width, 0, _height).

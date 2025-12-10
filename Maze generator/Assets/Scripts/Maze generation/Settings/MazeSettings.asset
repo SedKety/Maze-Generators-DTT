@@ -12,3 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cad7f35d8b14e5e44accd98fc372da12, type: 3}
   m_Name: MazeSettings
   m_EditorClassIdentifier: 
+  mazeIndex: 2
+  width: 25
+  height: 25
+  generationDelay: 0.001
+  algorithms:
+  - {fileID: 11400000, guid: 7cdc49890c1e91b4cafee71e31f74329, type: 2}
+  - {fileID: 11400000, guid: ee0ae27b0ddad5541b26b3490867a03a, type: 2}
+  - {fileID: 11400000, guid: b043ffd2287699947a23ba400da147e4, type: 2}

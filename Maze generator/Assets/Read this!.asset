@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a2c2d3290dec4fe4e826644999fff42a, type: 3}
+  m_Name: Read this!
+  m_EditorClassIdentifier: 
+  content: "Hello! I am Nobe Mol and i made this project for DTT Multimedia, i had
+    to show my programming skills making a maze.\n\nMy spin on it was to make 3 algorithms:
+    Binary tree, Growing tree and Recursive backtracking.\n\nI implemented gpu instancing
+    to reduce memory(no need for gameobjects, pure data) and allowing for mass batching
+    to reduce GPU cost.\n\nI have only included the PC build, but there is mobile
+    support if you'd build to it.\n\n\nIf there are any questions please ask me.
+    \nGmail: Nobe.mol@gmail.com\nDiscord: sed_ket"

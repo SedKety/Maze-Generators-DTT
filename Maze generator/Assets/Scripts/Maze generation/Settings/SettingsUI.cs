@@ -6,8 +6,9 @@ public class SettingsUI : MonoBehaviour
 {
     [SerializeField] private Settings settings;
 
-    [SerializeField] private Slider widthSlider;
-    [SerializeField] private Slider heightSlider;
+    [SerializeField] private TMP_InputField widthInput;
+    [SerializeField] private TMP_InputField heightInput;
+    [SerializeField] private TMP_InputField stepTimeInput;
 
     [SerializeField] private TextMeshProUGUI currentMazeText;
     private int currentMazeIndex;
@@ -16,14 +17,17 @@ public class SettingsUI : MonoBehaviour
     void Start()
     {
         mazeCount = settings.algorithms.Length;
+        stepTimeInput.text = settings.generationDelay.ToString();
+        UpdateMazeNameText();
     }
 
 
     void UpdateSettings()
     {
         settings.mazeIndex = currentMazeIndex;
-        settings.height = (int)heightSlider.value;
-        settings.width = (int)widthSlider.value;
+        settings.generationDelay = float.Parse(stepTimeInput.text);
+        settings.height = int.Parse(heightInput.text);
+        settings.width = int.Parse(widthInput.text);
     }
 
     public void OnGenerationButtonPushed()
